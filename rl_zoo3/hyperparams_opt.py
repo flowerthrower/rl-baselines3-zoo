@@ -6,6 +6,8 @@ from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckA
 from torch import nn as nn
 
 from rl_zoo3 import linear_schedule
+from sb3_contrib.common.maskable.policies import MaskableMultiInputActorCriticPolicy
+from mqt.predictor.rl.torch_layers import CustomCombinedExtractor
 
 
 def sample_ppo_params(trial: optuna.Trial, n_actions: int, n_envs: int, additional_args: dict) -> Dict[str, Any]:
@@ -534,6 +536,51 @@ def sample_ars_params(trial: optuna.Trial, n_actions: int, n_envs: int, addition
         # "policy_kwargs": dict(net_arch=net_arch),
     }
 
+def sample_ppo_mask_params(trial: optuna.Trial, n_actions: int, n_envs: int, additional_args: dict) -> Dict[str, Any]:
+    """
+    Sampler for MaskedPPO hyperparams.
+    uses sample_ppo_params(), this function samples for the policy_kwargs
+    :param trial:
+    :return:
+    """
+    net_arch_type = trial.suggest_categorical("net_arch", ["tiny", "small", "medium"])
+    net_arch = {
+        "tiny": dict(pi=[64], vf=[64]),
+        "small": dict(pi=[64, 64], vf=[64, 64]),
+        "medium": dict(pi=[256, 256], vf=[256, 256]),
+    }[net_arch_type]
+
+    activation_fn_name = trial.suggest_categorical("activation_fn", ["tanh", "relu"])
+    activation_fn = {"tanh": nn.Tanh, "relu": nn.ReLU, "elu": nn.ELU, "leaky_relu": nn.LeakyReLU}[activation_fn_name]
+
+    hyperparams = {
+        "n_steps": trial.suggest_categorical("n_steps", [8, 16, 32, 64, 128, 256, 512, 1024, 2048]),
+        "batch_size": trial.suggest_categorical("batch_size", [8, 16, 32, 64, 128, 256, 512]),
+        "gamma": trial.suggest_categorical("gamma", [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999]),
+        "learning_rate": trial.suggest_float("learning_rate", 1e-5, 1, log=True),
+        "ent_coef": trial.suggest_float("ent_coef", 0.00000001, 0.1, log=True),
+        "clip_range": trial.suggest_categorical("clip_range", [0.1, 0.2, 0.3, 0.4]),
+        "n_epochs": trial.suggest_categorical("n_epochs", [1, 5, 10, 20]),
+        "gae_lambda": trial.suggest_categorical("gae_lambda", [0.8, 0.9, 0.92, 0.95, 0.98, 0.99, 1.0]),
+        "max_grad_norm": trial.suggest_categorical("max_grad_norm", [0.3, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 5]),
+        "vf_coef": trial.suggest_float("vf_coef", 0, 1),
+        "policy":MaskableMultiInputActorCriticPolicy,
+        "policy_kwargs":dict(
+            features_extractor_class=CustomCombinedExtractor,
+            features_extractor_kwargs=dict(
+                cnn_output_dim=32,
+                normalized_image=False,
+            ),
+            net_arch=net_arch,
+            activation_fn=activation_fn,
+            ortho_init=False,
+        ),
+    }
+    if hyperparams["batch_size"] > hyperparams["n_steps"]:
+        hyperparams["batch_size"] = hyperparams["n_steps"]
+
+    return hyperparams
+
 
 HYPERPARAMS_SAMPLER = {
     "a2c": sample_a2c_params,
@@ -545,6 +592,7 @@ HYPERPARAMS_SAMPLER = {
     "tqc": sample_tqc_params,
     "ppo": sample_ppo_params,
     "ppo_lstm": sample_ppo_lstm_params,
+    "ppo_mask": sample_ppo_mask_params,
     "td3": sample_td3_params,
     "trpo": sample_trpo_params,
 }

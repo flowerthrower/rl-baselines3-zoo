@@ -1,0 +1,3 @@
+PredictorEnv-v0:
+  policy: 'MlpLstmPolicy'
+  n_timesteps: 1024

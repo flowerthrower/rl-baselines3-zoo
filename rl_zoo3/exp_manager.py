@@ -51,6 +51,7 @@ from rl_zoo3.callbacks import SaveVecNormalizeCallback, TrialEvalCallback
 from rl_zoo3.hyperparams_opt import HYPERPARAMS_SAMPLER
 from rl_zoo3.utils import ALGOS, get_callback_list, get_class_by_name, get_latest_run_id, get_wrapper_class, linear_schedule
 
+from mqt.predictor.rl import PredictorEnv
 
 class ExperimentManager:
     """
@@ -426,7 +427,7 @@ class ExperimentManager:
             del hyperparams["frame_stack"]
 
         # import the policy when using a custom policy
-        if "policy" in hyperparams and "." in hyperparams["policy"]:
+        if "policy" in hyperparams and isinstance(hyperparams["policy"], str) and "." in hyperparams["policy"]:
             hyperparams["policy"] = get_class_by_name(hyperparams["policy"])
 
         # obtain a class object from a wrapper name string in hyperparams
@@ -524,7 +525,10 @@ class ExperimentManager:
 
     @staticmethod
     def entry_point(env_id: str) -> str:
-        return str(gym.envs.registry[env_id].entry_point)
+        try:
+            return str(gym.envs.registry[env_id].entry_point)
+        except Exception:
+            return "unknown"
 
     @staticmethod
     def is_atari(env_id: str) -> bool:
@@ -607,13 +611,16 @@ class ExperimentManager:
         ):
             self.monitor_kwargs = dict(info_keywords=("is_success",))
 
-        spec = gym.spec(self.env_name.gym_id)
+        if self.env_name == "PredictorEnv-v0":
+            make_env = lambda **kwargs: PredictorEnv(**kwargs)
+        else:
+            spec = gym.spec(self.env_name.gym_id)
 
-        # Define make_env here, so it works with subprocesses
-        # when the registry was modified with `--gym-packages`
-        # See https://github.com/HumanCompatibleAI/imitation/pull/160
-        def make_env(**kwargs) -> gym.Env:
-            return spec.make(**kwargs)
+            # Define make_env here, so it works with subprocesses
+            # when the registry was modified with `--gym-packages`
+            # See https://github.com/HumanCompatibleAI/imitation/pull/160
+            def make_env(**kwargs) -> gym.Env:
+                return spec.make(**kwargs)
 
         env_kwargs = self.eval_env_kwargs if eval_env else self.env_kwargs
 

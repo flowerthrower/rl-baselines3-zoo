@@ -9,7 +9,7 @@ def _assert_eq(left, right):
     assert left == right, f"{left} != {right}"
 
 
-N_STEPS = 100
+N_STEPS = 128
 
 ALGOS = ("ppo", "a2c", "dqn")
 # 'BreakoutNoFrameskip-v4'
@@ -87,16 +87,23 @@ def test_custom_yaml(tmp_path):
     _assert_eq(return_code, 0)
 
 
-@pytest.mark.parametrize("config_file", ["hyperparams.python.ppo_config_example", "hyperparams/python/ppo_config_example.py"])
+@pytest.mark.parametrize("config_file", ["hyperparams/python/ppo_mask_config.py"])
 def test_python_config_file(tmp_path, config_file):
-    # Use the example python config file for training
     cmd = (
-        f"python train.py -n {N_STEPS} --algo ppo --env MountainCarContinuous-v0 --log-folder {tmp_path} "
+        f"python {'train.py'} "
+        f"--algo {'ppo_mask'} "
+        f"--env {'PredictorEnv-v0'} "
+        f"--log-folder {tmp_path} "
         f"-conf {config_file} "
+        "--track"
+        #f"-optimize "
+        #f"--n-trials {100} " 
+        #f"--n-jobs {2} "
+        #f"--sampler {'tpe'} " 
+        #f"--pruner {'median'} "
     )
     return_code = subprocess.call(shlex.split(cmd))
     _assert_eq(return_code, 0)
-
 
 def test_gym_packages(tmp_path):
     # Update python path so the test_env package is found
