@@ -191,7 +191,9 @@ class ExperimentManager:
         hyperparams, self.env_wrapper, self.callbacks, self.vec_env_wrapper = self._preprocess_hyperparams(
             unprocessed_hyperparams
         )
-
+        self.env_kwargs = hyperparams.get("env_kwargs", self.env_kwargs)
+        hyperparams.pop("env_kwargs", None)
+        
         self.create_log_folder()
         self.create_callbacks()
 
@@ -262,6 +264,10 @@ class ExperimentManager:
         """
         print(f"Saving to {self.save_path}")
         model.save(f"{self.save_path}/{self.env_name}")
+
+        #tmp_path = "/home/ubuntu/mqt/rl-baselines3-zoo/tmp"
+        #model.save(f"{tmp_path}/{self.env_name}")
+        #print(f"Also saving to {tmp_path}")
 
         if hasattr(model, "save_replay_buffer") and self.save_replay_buffer:
             print("Saving replay buffer")

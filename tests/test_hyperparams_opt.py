@@ -44,7 +44,7 @@ def test_optimize(tmp_path, sampler, pruner, experiment):
     algo, env_id = experiments[experiment]
 
     # Skip slow tests
-    if algo not in {"a2c", "ppo"} and not (sampler == "random" and pruner == "median"):
+    if algo not in {"a2c", "ppo_lstm"} and not (sampler == "random" and pruner == "median"):
         pytest.skip("Skipping slow tests")
 
     maybe_params = "n_steps:10" if algo == "ppo" else ""

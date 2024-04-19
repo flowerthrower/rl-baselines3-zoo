@@ -89,13 +89,18 @@ def test_custom_yaml(tmp_path):
 
 @pytest.mark.parametrize("config_file", ["hyperparams/python/ppo_mask_config.py"])
 def test_python_config_file(tmp_path, config_file):
+    log_fldr = "/home/ubuntu/mqt/rl-baselines3-zoo/tmp"
+    config_file = "hyperparams/python/ppo_mask_config.py"
     cmd = (
         f"python {'train.py'} "
         f"--algo {'ppo_mask'} "
         f"--env {'PredictorEnv-v0'} "
-        f"--log-folder {tmp_path} "
+        f"--log-folder {log_fldr} "
         f"-conf {config_file} "
-        "--track"
+        f"-n {100} " # overwrite hyperparameters
+        #f"--save-freq {100} "
+        f"--tensorboard-log {log_fldr} "
+        #"--track"
         #f"-optimize "
         #f"--n-trials {100} " 
         #f"--n-jobs {2} "

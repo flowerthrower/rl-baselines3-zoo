@@ -236,3 +236,36 @@ class RawStatisticsCallback(BaseCallback):
                 self._tensorboard_writer.write(logger_dict, exclude_dict, self._timesteps_counter)
 
         return True
+
+class CustomCallback(BaseCallback):
+    """
+    Callback used for logging raw episode data (return and episode length).
+    """
+
+    def __init__(self, verbose=0):
+        super().__init__(verbose)
+        # Custom counter to reports stats
+        # (and avoid reporting multiple values for the same step)
+        self._timesteps_counter = 0
+        self._tensorboard_writer = None
+
+    def _init_callback(self) -> None:
+        assert self.logger is not None
+        # Retrieve tensorboard writer to not flood the logger output
+        for out_format in self.logger.output_formats:
+            if isinstance(out_format, TensorBoardOutputFormat):
+                self._tensorboard_writer = out_format
+        assert self._tensorboard_writer is not None, "You must activate tensorboard logging when using CustomCallback"
+
+    def _on_step(self) -> bool:
+        for info in self.locals["infos"]:
+            if "terminal_fig_of_mer" in info:
+                logger_dict = {
+                    "custom/rollouts/terminal_fig_of_mer": info["terminal_fig_of_mer"],
+                    "custom/rollouts/terminal_improvement": info["terminal_improvement"],                    
+                }
+                exclude_dict = {key: None for key in logger_dict.keys()}
+                self._tensorboard_writer.write(logger_dict, exclude_dict, self.num_timesteps)
+
+        return True
+    
